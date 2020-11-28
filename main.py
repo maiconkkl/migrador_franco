@@ -67,6 +67,8 @@ class Migrador:
         )
         self.database1 = self.client1['parse']
         self.migrar_grupo()
+        self.migrar_tributacao_federal()
+        self.migrar_pessoas()
 
     def fecha_conexao(self):
         self.client.close()
@@ -76,10 +78,10 @@ class Migrador:
         collection_pessoa = self.database1["Pessoa"]
         query = {"tipoCadastro": Regex(u".*emitente.*", "i"), "ativo": True}
         if cnpj is not None:
-            query["documento.cnpj.documento"] = u"78479344000112"
+            query["documento.cnpj.documento"] = cnpj
 
         if ie is not None:
-            query["documento.ie.documento"] = u"78479344000112"
+            query["documento.ie.documento"] = ie
 
         pessoa_cursor = collection_pessoa.find_one(query)
 
@@ -95,9 +97,9 @@ class Migrador:
         cursor = grupos_collection.find({})
 
         for doc in cursor:
-            grupo_id = str(ObjectId())
+
             modelo = {
-                "_id": grupo_id,
+                "_id": "",
                 "ativo": doc['Ativo'],
                 "nome": doc['Descricao'],
                 "_p_empresa": "",
@@ -105,10 +107,11 @@ class Migrador:
                 "_updated_at": datetime.now()
             }
             for empresa in empresas:
+                modelo['_id'] = str(ObjectId())
                 modelo['_p_empresa'] = "Empresa$" + empresa['_id']
                 grupo_collection.insert_one(modelo)
                 for sub_grupo in doc['SubGruposReferencia']:
-                    self.migrar_subgrupo(sub_grupo, grupo_id)
+                    self.migrar_subgrupo(sub_grupo, modelo['_id'])
 
     def migrar_subgrupo(self, sub_grupo_id, grupo_id):
         sub_grupos_collection = self.database["SubGrupos"]
@@ -282,7 +285,7 @@ class Migrador:
             cst_cofins_saida = cofins_saida['CstPISCOFINS']['Codigo']
 
             modelo = {
-                "_id": "9QRvMFdgFH",
+                "_id": "",
                 "ativo": doc['Ativo'],
                 "nome": doc['Descricao'],
                 "descricao": doc['Descricao'],
@@ -468,6 +471,7 @@ class Migrador:
             modelo["_created_at"] = datetime.now()
             modelo["_updated_at"] = datetime.now()
             for empresa in empresas:
+                modelo['_id'] = str(ObjectId())
                 modelo["_p_empresa"] = "Empresa$" + empresa['_id']
                 trib_federal1_collection.insert_one()
 

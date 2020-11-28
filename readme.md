@@ -33,3 +33,17 @@ dentro desse projeto. O mesmo pode ser criado usando o seguinte comando pelo CMD
     pip install -r requeriments.txt
     
 Quando todos os passos acima forem concluidos a instalação esta finalizada.
+
+O que vai ser migrado ?
+-----------------
+* **Tributação federal - Já esta completo**
+* Tributação estadual
+* Unidade de medida
+* **Grupo - Já esta completo**
+* **Subgrupo - Já esta completo**
+* Laboratorio
+* Produtos
+* **Pessoas - Já esta completo**
+* Plano de contas
+* Contas
+* Pagamentos
