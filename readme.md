@@ -38,7 +38,7 @@ O que vai ser migrado ?
 -----------------
 * **Tributação federal - Já esta completo**
 * **Tributação estadual - Já esta completo**
-* Unidade de medida
+* **Unidade de medida - Já esta completo**
 * **Grupo - Já esta completo**
 * **Subgrupo - Já esta completo**
 * Laboratorio

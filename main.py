@@ -6,7 +6,6 @@ from datetime import datetime
 
 
 class Migrador:
-
     client: MongoClient = None
     host = ''
     username = 'root'
@@ -72,6 +71,7 @@ class Migrador:
         self.migrar_tributacao_federal()
         self.migrar_pessoas()
         self.migrar_tributacao_estadual()
+        self.migrar_unidades_medida()
 
     def fecha_conexao(self):
         self.client.close()
@@ -361,7 +361,7 @@ class Migrador:
 
                 # verificando se bota tags de substituicao ou as normais
                 if cst_pis_entrada in [75]:
-                    modelo["pis"]["entrada"]["baseCalculoST"] =  pis_entrada['PercentualBaseCalculo']
+                    modelo["pis"]["entrada"]["baseCalculoST"] = pis_entrada['PercentualBaseCalculo']
                 else:
                     modelo["pis"]["entrada"]["baseCalculo"] = pis_entrada['PercentualBaseCalculo']
 
@@ -390,7 +390,7 @@ class Migrador:
 
                 # verificando se bota tags de substituicao ou as normais
                 if cst_pis_entrada in [75]:
-                    modelo["pis"]["saida"]["baseCalculoST"] =  pis_saida['PercentualBaseCalculo']
+                    modelo["pis"]["saida"]["baseCalculoST"] = pis_saida['PercentualBaseCalculo']
                 else:
                     modelo["pis"]["saida"]["baseCalculo"] = pis_saida['PercentualBaseCalculo']
 
@@ -623,6 +623,27 @@ class Migrador:
                 modelo['_id'] = str(ObjectId())
                 modelo['_p_empresa'] = "Empresa$" + empresa['_id']
                 trib_estadual1_colletion.insert_one(modelo)
+
+    def migrar_unidades_medida(self):
+        empresas = self.localizar_empresa_destino()
+        uni_med_collection = self.database["UnidadesMedida"]
+        uni_med1_collection = self.database1["UnidadeMedida"]
+
+        cursor = uni_med_collection.find({})
+        for doc in cursor:
+            modelo = {
+                "_id": "",
+                "ativo": True,
+                "nome": doc['Descricao'],
+                "sigla": doc['Sigla'],
+                "_p_empresa": "",
+                "_created_at": datetime.now(),
+                "_updated_at": datetime.now()
+            }
+            for empresa in empresas:
+                modelo['_id'] = str(ObjectId())
+                modelo['_p_empresa'] = "Empresa$" + empresa['_id']
+                uni_med1_collection.insert_one(modelo)
 
 
 Migrador()
