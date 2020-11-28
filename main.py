@@ -6,25 +6,27 @@ from datetime import datetime
 
 
 class Migrador:
+
     client: MongoClient = None
-    client1: MongoClient = None
     host = ''
-    host1 = '127.0.0.1'
     username = 'root'
-    username1 = 'root'
     password = '|cSFu@5rFv#h8*='
-    password1 = '|cSFu@5rFv#h8*='
     connectTimeoutMS = 10000
-    connectTimeoutMS1 = 10000
     authMechanism = 'SCRAM-SHA-1'
-    authMechanism1 = 'SCRAM-SHA-1'
     authSource = 'admin'
-    authSource1 = 'admin'
     serverSelectionTimeoutMS = 5000
-    serverSelectionTimeoutMS1 = 5000
     port = 12220
-    port1 = 12220
     database = None
+
+    client1: MongoClient = None
+    host1 = '127.0.0.1'
+    username1 = 'root'
+    password1 = '|cSFu@5rFv#h8*='
+    connectTimeoutMS1 = 10000
+    authMechanism1 = 'SCRAM-SHA-1'
+    authSource1 = 'admin'
+    serverSelectionTimeoutMS1 = 5000
+    port1 = 12220
     database1 = None
 
     def __init__(self):
@@ -69,6 +71,7 @@ class Migrador:
         self.migrar_grupo()
         self.migrar_tributacao_federal()
         self.migrar_pessoas()
+        self.migrar_tributacao_estadual()
 
     def fecha_conexao(self):
         self.client.close()
@@ -321,8 +324,7 @@ class Migrador:
                         "cst": cst_cofins_saida.zfill(2),
                     }
                 },
-                "_p_empresa": "",
-                "padrao": True
+                "_p_empresa": ""
             }
             # IPI Entrada
             if 'PercentualBaseCalculo' in ipi_entrada:
@@ -474,6 +476,153 @@ class Migrador:
                 modelo['_id'] = str(ObjectId())
                 modelo["_p_empresa"] = "Empresa$" + empresa['_id']
                 trib_federal1_collection.insert_one()
+
+    def migrar_tributacao_estadual(self):
+        empresas = self.localizar_empresa_destino()
+        trib_estadual_colletion = self.database["TributacoesEstadual"]
+        trib_estadual1_colletion = self.database["TributacaoEstadual"]
+        op_fiscal_colletion = self.database["OperacoesFiscais"]
+        cursor = trib_estadual_colletion.find({})
+
+        for doc in cursor:
+            nao_contribuinte = []
+            contribuinte = []
+            industria = []
+            publico = []
+            for uf_tributacao in doc['UfsTributacao']:
+                sigla_uf = uf_tributacao['Uf']['Sigla']
+                trib: dict = {}
+                modelo_percentual = {
+                    sigla_uf: {
+                        "bc": 0,  # OK
+                        "tipo": "",  # OK
+                        "fcpRetido": 0,  # Não identificado
+                        "diferimento": 0,  # Ignorar dito por Rick
+                        "cst": "",  # OK
+                        "creditoIcmsSN": 0,  # OK
+                        "origem": "",  # OK
+                        "cfop": "",  # OK
+                        "bcST": 0,  # OK
+                        "bcOperacaoPropria": 0,  # Não usado dito por gabriel
+                        "uf": "",  # OK
+                        "icms": 0,  # OK
+                        "icmsInterno": 0,  # OK
+                        "fcp": 0,  # OK
+                        "fcpRetidoST": 0,  # Não identificado
+                        "icmsEfetivo": 0,  # OK
+                        "icmsST": 0,
+                        "bcIcmsEfetivo": 0,  # Não usado dito por gabriel
+                        "fcpUFDestino": 0,  # OK
+                        "icmsInterestadual": 0,  # Não usado dito por gabriel
+                        "fcpST": 0,  # OK
+                        "mva": 0,  # OK
+                        "icmsRetidoST": 0  # OK
+                    }
+                }
+                if 'NaoContribuinte' in uf_tributacao:
+                    trib = uf_tributacao['NaoContribuinte']
+                    modelo_percentual[sigla_uf]['tipo'] = "naoContribuinte"
+                elif 'Contribuinte' in uf_tributacao:
+                    trib = uf_tributacao['Contribuinte']
+                    modelo_percentual[sigla_uf]['tipo'] = "contribuinte"
+                elif 'Industria' in uf_tributacao:
+                    trib = uf_tributacao['Industria']
+                    modelo_percentual[sigla_uf]['tipo'] = "industria"
+                elif 'Publico' in uf_tributacao:
+                    trib = uf_tributacao['Publico']
+                    modelo_percentual[sigla_uf]['tipo'] = "publico"
+                modelo_percentual[sigla_uf]['uf'] = sigla_uf
+                modelo_percentual[sigla_uf]['cst'] = str(trib['SituacaoTributaria']['Codigo']).zfill(2)
+                modelo_percentual[sigla_uf]['origem'] = str(trib['OrigemMercadoria']['Codigo'])
+                op_fiscal = op_fiscal_colletion.find_one({"_id": trib['OperacaoFiscalReferencia']})
+                modelo_percentual[sigla_uf]['cfop'] = str(op_fiscal['Cfop']['Codigo'])
+
+                if 'PercentualSimplesNacional' in trib:
+                    modelo_percentual[sigla_uf]['creditoIcmsSN'] = trib['PercentualSimplesNacional']
+
+                if 'PercentualIcms' in trib:
+                    modelo_percentual[sigla_uf]['icms'] = trib['PercentualIcms']
+
+                if 'PercentualInterno' in trib:
+                    modelo_percentual[sigla_uf]['icmsInterno'] = trib['PercentualInterno']
+
+                if 'PercentualIcmsEfetivo' in trib:
+                    modelo_percentual[sigla_uf]['icmsEfetivo'] = trib['PercentualIcmsEfetivo']
+
+                if 'PercentualIcms' in trib:
+                    modelo_percentual[sigla_uf]['icmsEfetivo'] = trib['PercentualIcms']
+
+                if 'PercentualBaseCalculo' in trib:
+                    modelo_percentual[sigla_uf]['bc'] = trib['PercentualBaseCalculo']
+
+                # ST
+                if 'PercentualSubstituicaoTributaria' in trib:
+                    modelo_percentual[sigla_uf]['icmsST'] = trib['PercentualSubstituicaoTributaria']
+
+                if 'PercentualMva' in trib:
+                    modelo_percentual[sigla_uf]['mva'] = trib['PercentualMva']
+
+                if 'PercentualBaseCalculoSt' in trib:
+                    modelo_percentual[sigla_uf]['bcST'] = trib['PercentualBaseCalculoSt']
+
+                # FCP
+                if 'PercentualFundoCombatePobrezaInterno' in trib:
+                    modelo_percentual[sigla_uf]['fcp'] = trib['PercentualFundoCombatePobrezaInterno']
+
+                if 'PercentualFundoCombatePobrezaStInterno' in trib:
+                    modelo_percentual[sigla_uf]['fcpST'] = trib['PercentualFundoCombatePobrezaStInterno']
+
+                if 'PercentualFundoCombatePobreza' in trib:
+                    modelo_percentual[sigla_uf]['fcpUFDestino'] = trib['PercentualFundoCombatePobreza']
+
+                # Retenção
+                if 'ValorIcmsStRetido' in trib:
+                    modelo_percentual[sigla_uf]['icmsRetidoST'] = trib['ValorIcmsStRetido']
+
+                if 'NaoContribuinte' in uf_tributacao:
+                    nao_contribuinte.append(modelo_percentual)
+                elif 'Contribuinte' in uf_tributacao:
+                    contribuinte.append(modelo_percentual)
+                elif 'Industria' in uf_tributacao:
+                    industria.append(modelo_percentual)
+                elif 'Publico' in uf_tributacao:
+                    publico.append(modelo_percentual)
+            modelo = {
+                "_id": "",
+                "_p_empresa": "",
+                "percentual": {},
+                "nome": doc['Descricao'],
+                "ativo": True,
+                "_created_at": datetime.now(),
+                "_updated_at": datetime.now(),
+                "descricao": doc['Descricao'],
+                "percentualUF": [
+                    {
+                        "uf": doc['Uf']['Sigla'],
+                        "tipo": "naoContribuinte",
+                        "observacao": "00",
+                        "origem": "0",
+                        "csosn": "102",
+                        "cfop": "5102"
+                    }
+                ]
+            }
+            if len(nao_contribuinte) > 0:
+                modelo['percentual']['naoContribuinte'] = nao_contribuinte
+
+            if len(contribuinte) > 0:
+                modelo['percentual']['contribuinte'] = contribuinte
+
+            if len(industria) > 0:
+                modelo['percentual']['industria'] = industria
+
+            if len(publico) > 0:
+                modelo['percentual']['industria'] = publico
+
+            for empresa in empresas:
+                modelo['_id'] = str(ObjectId())
+                modelo['_p_empresa'] = "Empresa$" + empresa['_id']
+                trib_estadual1_colletion.insert_one(modelo)
 
 
 Migrador()

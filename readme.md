@@ -37,7 +37,7 @@ Quando todos os passos acima forem concluidos a instalação esta finalizada.
 O que vai ser migrado ?
 -----------------
 * **Tributação federal - Já esta completo**
-* Tributação estadual
+* **Tributação estadual - Já esta completo**
 * Unidade de medida
 * **Grupo - Já esta completo**
 * **Subgrupo - Já esta completo**
