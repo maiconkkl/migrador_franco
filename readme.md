@@ -41,7 +41,7 @@ O que vai ser migrado ?
 * **Unidade de medida - Já esta completo**
 * **Grupo - Já esta completo**
 * **Subgrupo - Já esta completo**
-* Laboratorio
+* **Laboratorio - Não tem na digisat**
 * Produtos
 * **Pessoas - Já esta completo**
 * Plano de contas
