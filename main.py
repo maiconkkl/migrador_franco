@@ -223,13 +223,14 @@ class Migrador:
                         "contato": doc['Carteira']['TelefoneWhatsApp']['Numero']
                     }
                     modelo["contato"].append(contato)
-
-                for celular in doc['Carteira']['Celulares']:
-                    contato = {
-                        "tipo": "telefone",
-                        "contato": celular['Numero']
-                    }
-                    modelo["contato"].append(contato)
+                    
+                if 'Celulares' in doc['Carteira']:
+                    for celular in doc['Carteira']['Celulares']:
+                        contato = {
+                            "tipo": "telefone",
+                            "contato": celular['Numero']
+                        }
+                        modelo["contato"].append(contato)
 
             modelo["nome"] = doc['Nome']
             if 'NomeFantasia' in doc:
