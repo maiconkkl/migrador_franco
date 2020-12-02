@@ -67,6 +67,7 @@ class Migrador:
             authMechanism=self.authMechanism1
         )
         self.database1 = self.client1['parse']
+
         self.migrar_grupo()
         self.migrar_tributacao_federal()
         self.migrar_pessoas()
@@ -317,11 +318,11 @@ class Migrador:
                 "cofins": {
                     "entrada": {
                         "tipo": "entrada",
-                        "cst": cst_cofins_entrada.zfill(2),
+                        "cst": str(cst_cofins_entrada).zfill(2),
                     },
                     "saida": {
                         "tipo": "saida",
-                        "cst": cst_cofins_saida.zfill(2),
+                        "cst": str(cst_cofins_saida).zfill(2),
                     }
                 },
                 "_p_empresa": ""
