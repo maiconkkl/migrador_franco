@@ -476,7 +476,7 @@ class Migrador:
             for empresa in empresas:
                 modelo['_id'] = str(ObjectId())
                 modelo["_p_empresa"] = "Empresa$" + empresa['_id']
-                trib_federal1_collection.insert_one()
+                trib_federal1_collection.insert_one(modelo)
 
     def migrar_tributacao_estadual(self):
         empresas = self.localizar_empresa_destino()
