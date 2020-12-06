@@ -135,6 +135,7 @@ class Migrador:
     def migrar_pessoas(self):
         pessoas_collection = self.database["Pessoas"]
         pessoa_collection = self.database1["Pessoa"]
+        empresas = self.localizar_empresa_destino()
 
         cursor = pessoas_collection.find({})
         for doc in cursor:
@@ -223,7 +224,7 @@ class Migrador:
                         "contato": doc['Carteira']['TelefoneWhatsApp']['Numero']
                     }
                     modelo["contato"].append(contato)
-                    
+
                 if 'Celulares' in doc['Carteira']:
                     for celular in doc['Carteira']['Celulares']:
                         contato = {
@@ -246,7 +247,11 @@ class Migrador:
                 modelo["tipo"] = 'fisica'
             modelo["_created_at"] = datetime.now()
             modelo["_updated_at"] = datetime.now()
-            pessoa_collection.insert_one(modelo)
+
+            for empresa in empresas:
+                modelo['_id'] = str(ObjectId())
+                modelo["_p_empresa"] = "Empresa$" + empresa['_id']
+                pessoa_collection.insert_one(modelo)
 
     def migrar_tributacao_federal(self):
         trib_federal_collection = self.database["TributacoesFederal"]
