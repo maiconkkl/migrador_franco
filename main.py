@@ -73,6 +73,7 @@ class Migrador:
         self.migrar_pessoas()
         self.migrar_tributacao_estadual()
         self.migrar_unidades_medida()
+        self.migrar_produtos()
 
     def fecha_conexao(self):
         self.client.close()
@@ -651,6 +652,165 @@ class Migrador:
                 modelo['_id'] = str(ObjectId())
                 modelo['_p_empresa'] = "Empresa$" + empresa['_id']
                 uni_med1_collection.insert_one(modelo)
+
+    def migrar_produtos(self):
+        empresas = self.localizar_empresa_destino()
+        produtos_collection = self.database["ProdutosServicosEmpresa"]
+        produto_collection = self.database1["Produto"]
+        sub_grupo_collection = self.database1["Subgrupo"]
+        uni_med1_collection = self.database1["UnidadeMedida"]
+        trib_federal1_collection = self.database1["TributacaoFederal"]
+        pipeline = [
+            {
+                u"$lookup": {
+                    u"from": u"ProdutosServicos",
+                    u"localField": u"ProdutoServicoReferencia",
+                    u"foreignField": u"_id",
+                    u"as": u"ProdutosServicos"
+                }
+            },
+            {
+                u"$lookup": {
+                    u"from": u"Precos",
+                    u"localField": u"PrecoReferencia",
+                    u"foreignField": u"_id",
+                    u"as": u"Precos"
+                }
+            },
+            {
+                u"$lookup": {
+                    u"from": u"Estoques",
+                    u"localField": u"EstoqueReferencia",
+                    u"foreignField": u"_id",
+                    u"as": u"Estoques"
+                }
+            },
+            {
+                u"$lookup": {
+                    u"from": u"TributacoesFederal",
+                    u"localField": u"TributacaoFederalReferencia",
+                    u"foreignField": u"_id",
+                    u"as": u"TributacoesFederal"
+                }
+            },
+            {
+                u"$lookup": {
+                    u"from": u"TributacoesEstadual",
+                    u"localField": u"TributacaoEstadualReferencia",
+                    u"foreignField": u"_id",
+                    u"as": u"TributacoesEstadual"
+                }
+            },
+            {
+                u"$lookup": {
+                    u"from": u"SubGrupos",
+                    u"localField": u"ProdutosServicos.0.SubGrupoReferencia",
+                    u"foreignField": u"_id",
+                    u"as": u"SubGrupos"
+                }
+            }
+        ]
+
+        cursor = produtos_collection.aggregate(
+            pipeline,
+            allowDiskUse=False
+        )
+        for doc in cursor:
+            query = {
+                "ativo": doc['SubGrupos'][0]['Ativo'],
+                "nome": doc['SubGrupos'][0]['Descricao']
+            }
+            sub_grupo = sub_grupo_collection.find_one(query)
+
+            query = {
+                "sigla": doc['ProdutosServicos'][0]['UnidadeMedida']['Sigla']
+            }
+            unidade_medida = uni_med1_collection.find_one(query)
+
+            query = {
+                "ativo": doc['TributacoesFederal'][0]['Ativo'],
+                "nome": doc['TributacoesFederal'][0]['Descricao']
+            }
+            tributacao_federal = trib_federal1_collection.find_one(query)
+
+            modelo = {
+                "precoAtacado": 0,
+                "precoCustoMedio": 0,
+                "precoCusto": doc['Precos'][0]['Custo']['Valor'],
+                "precoCustoReal": 0,
+                "_p_unidadeMedidaTributavel": "UnidadeMedida$"+unidade_medida['_id'],
+                "preco": doc['Precos'][0]['Venda']['Valor'],
+                "ativo": doc['Ativo'],
+                "_p_subgrupo": "Subgrupo$"+sub_grupo['_id'],
+                "_p_tributacaoFederal": "TributacaoFederal$"+tributacao_federal['_id'],
+                "nome": doc['ProdutosServicos'][0]['Descricao'],
+                "_p_unidadeMedida": "UnidadeMedida$"+unidade_medida['_id'],
+                "estoque": 0,
+                "fator": 1,
+                "classificacao": "produto",
+                "quantidadeAtacado": 0,
+                "codigoInterno": doc['ProdutosServicos'][0]['CodigoInterno'],
+                "ncm": doc['NcmNbs']['Codigo'],
+                "tipoEstoque": "normal",
+                "estoqueMaximo": doc['Estoques'][0]['QuantidadeMaxima'],
+                "_p_tributacaoEstadual": "TributacaoEstadual$DV6r7ksZtb",
+                "estoqueMinimo": doc['Estoques'][0]['QuantidadeMinima'],
+                "_created_at": datetime.now(),
+                "_updated_at": datetime.now(),
+                "caracteristica": None,
+                "cest": None,
+                "descontoMaximo": doc['LimiteDesconto'],
+                "vendavel": doc['ProdutosServicos'][0]['Vendavel']
+            }
+            
+            if 'Caracteristica' in doc['ProdutosServicos'][0]:
+                modelo["caracteristica"] = doc['ProdutosServicos'][0]['Caracteristica']
+
+            if 'CodigoEspecificadorSubstituicaoTributaria' in doc:
+                modelo["cest"] = doc['CodigoEspecificadorSubstituicaoTributaria']
+
+            if 'Medicamento' in doc['ProdutosServicos'][0]['_t']:
+                modelo["classificacao"] = "medicamento"
+                modelo["medicamento"] = {
+                    "registroMS": doc['ProdutosServicos'][0]["RegistroMinisterioSaude"],
+                }
+
+                if 'Antimicrobiano' == doc['ProdutosServicos'][0]["ClasseTerapeutica"]['_t']:
+                    modelo["medicamento"]["classeTerapeutica"] = "1"
+
+                if 'SujeitoAControleEspecial' == doc['ProdutosServicos'][0]["ClasseTerapeutica"]['_t']:
+                    modelo["medicamento"]["classeTerapeutica"] = "2"
+
+                if 'PrecoMaximoConsumidor' in doc['ProdutosServicos'][0]:
+                    modelo["medicamento"]["PMC"] = doc['ProdutosServicos'][0]['PrecoMaximoConsumidor']
+
+                if 'Sim' == doc['ProdutosServicos'][0]['UsoProlongado']['_t']:
+                    modelo["medicamento"]["usoProlongado"] = True
+                elif 'Nao' == doc['ProdutosServicos'][0]['UsoProlongado']['_t']:
+                    modelo["medicamento"]["usoProlongado"] = False
+
+            if 'CodigoBarras' in doc['ProdutosServicos'][0]:
+                modelo["cean"] = [
+                    {
+                        "cean": doc['ProdutosServicos'][0]['CodigoBarras'],
+                        "fator": 1
+                    }
+                ]
+
+            if 'EstoqueLote' in doc['Estoques'][0]['_t']:
+                modelo["tipoEstoque"] = "lote"
+
+            if 'UnidadeMedidaTributavel' in doc['ProdutosServicos'][0]:
+                query = {
+                    "sigla": doc['ProdutosServicos'][0]['UnidadeMedida']['Sigla']
+                }
+                unidade_medida = uni_med1_collection.find_one(query)
+                modelo['_p_unidadeMedidaTributavel'] = "UnidadeMedida$"+unidade_medida['_id']
+
+            for empresa in empresas:
+                modelo['_id'] = str(ObjectId())
+                modelo['_p_empresa'] = "Empresa$" + empresa['_id']
+                produto_collection.insert_one(modelo)
 
 
 Migrador()
