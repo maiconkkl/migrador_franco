@@ -100,20 +100,17 @@ class Migrador:
         grupos_collection = self.database["Grupos"]
         grupo_collection = self.database1["Grupo"]
         cursor = grupos_collection.find({})
+        for empresa in empresas:
+            for doc in cursor:
+                modelo = {
+                    "_id": str(ObjectId()),
+                    "ativo": doc['Ativo'],
+                    "nome": doc['Descricao'],
+                    "_p_empresa": "Empresa$" + empresa['_id'],
+                    "_created_at": datetime.now(),
+                    "_updated_at": datetime.now()
+                }
 
-        for doc in cursor:
-
-            modelo = {
-                "_id": "",
-                "ativo": doc['Ativo'],
-                "nome": doc['Descricao'],
-                "_p_empresa": "",
-                "_created_at": datetime.now(),
-                "_updated_at": datetime.now()
-            }
-            for empresa in empresas:
-                modelo['_id'] = str(ObjectId())
-                modelo['_p_empresa'] = "Empresa$" + empresa['_id']
                 grupo_collection.insert_one(modelo)
                 for sub_grupo in doc['SubGruposReferencia']:
                     self.migrar_subgrupo(sub_grupo, modelo['_id'])
@@ -139,119 +136,116 @@ class Migrador:
         empresas = self.localizar_empresa_destino()
 
         cursor = pessoas_collection.find({})
-        for doc in cursor:
-            pessoa_id = str(ObjectId())
-            modelo = {"_id": pessoa_id}
-            if 'Classificacao' in doc:
-                modelo["classificacao"] = doc['Classificacao']['_t'].lower()
-            if 'Cnpj' in doc:
-                if 'documento' not in modelo:
-                    modelo["documento"] = {}
-                modelo["documento"]["cnpj"] = {
-                    "tipo": "cnpj",
-                    "documento": doc['Cnpj']
-                }
-
-            if 'CNAE' in doc:
-                if 'documento' not in modelo:
-                    modelo["documento"] = {}
-                modelo["documento"]["cnae"] = {
-                    "tipo": "cnae",
-                    "documento": doc['CNAE']
-                }
-
-            if 'RegistroMunicipal' in doc:
-                if 'documento' not in modelo:
-                    modelo["documento"] = {}
-                modelo["documento"]["im"] = {
-                    "tipo": "im",
-                    "documento": doc['RegistroMunicipal']
-                }
-
-            if 'Carteira' in doc:
-                if 'Ie' in doc['Carteira']:
+        for empresa in empresas:
+            for doc in cursor:
+                modelo = {"_id": str(ObjectId()), "_p_empresa": "Empresa$" + empresa['_id']}
+                if 'Classificacao' in doc:
+                    modelo["classificacao"] = doc['Classificacao']['_t'].lower()
+                if 'Cnpj' in doc:
                     if 'documento' not in modelo:
                         modelo["documento"] = {}
                     modelo["documento"]["cnpj"] = {
-                        "tipo": "ie",
-                        "indicadorIE": "1",
-                        "documento": doc['Carteira']['Ie']['Numero']
+                        "tipo": "cnpj",
+                        "documento": doc['Cnpj']
                     }
 
-                modelo["endereco"] = {}
-                if 'EnderecoPrincipal' in doc['Carteira']:
-                    modelo["endereco"]['principal'] = {
-                        "tipo": "principal",
-                        "cep": doc['Carteira']['EnderecoPrincipal']['Cep'],
-                        "bairro": doc['Carteira']['EnderecoPrincipal']['Bairro'],
-                        "logradouro": doc['Carteira']['EnderecoPrincipal']['Logradouro'],
-                        "uf": doc['Carteira']['EnderecoPrincipal']['Municipio']['Uf']['Sigla'],
-                        "codigoMunicipio": str(doc['Carteira']['EnderecoPrincipal']['Municipio']['CodigoIbge']),
-                        "municipio": doc['Carteira']['EnderecoPrincipal']['Municipio']['Nome'],
-                        "numero": doc['Carteira']['EnderecoPrincipal']['Numero']
+                if 'CNAE' in doc:
+                    if 'documento' not in modelo:
+                        modelo["documento"] = {}
+                    modelo["documento"]["cnae"] = {
+                        "tipo": "cnae",
+                        "documento": doc['CNAE']
                     }
-                modelo["contato"] = []
-                if 'TelefonePrincipal' in doc['Carteira']:
-                    contato = {
-                        "tipo": "telefone",
-                        "contato": doc['Carteira']['TelefonePrincipal']['Numero']
-                    }
-                    modelo["contato"].append(contato)
 
-                if 'TelefoneComercial' in doc['Carteira']:
-                    contato = {
-                        "tipo": "telefone",
-                        "contato": doc['Carteira']['TelefoneComercial']['Numero']
+                if 'RegistroMunicipal' in doc:
+                    if 'documento' not in modelo:
+                        modelo["documento"] = {}
+                    modelo["documento"]["im"] = {
+                        "tipo": "im",
+                        "documento": doc['RegistroMunicipal']
                     }
-                    modelo["contato"].append(contato)
 
-                if 'TelefoneFax' in doc['Carteira']:
-                    contato = {
-                        "tipo": "telefone",
-                        "contato": doc['Carteira']['TelefoneFax']['Numero']
-                    }
-                    modelo["contato"].append(contato)
+                if 'Carteira' in doc:
+                    if 'Ie' in doc['Carteira']:
+                        if 'documento' not in modelo:
+                            modelo["documento"] = {}
+                        modelo["documento"]["cnpj"] = {
+                            "tipo": "ie",
+                            "indicadorIE": "1",
+                            "documento": doc['Carteira']['Ie']['Numero']
+                        }
 
-                if 'TelefoneResidencial' in doc['Carteira']:
-                    contato = {
-                        "tipo": "telefone",
-                        "contato": doc['Carteira']['TelefoneResidencial']['Numero']
-                    }
-                    modelo["contato"].append(contato)
-
-                if 'TelefoneWhatsApp' in doc['Carteira']:
-                    contato = {
-                        "tipo": "telefone",
-                        "contato": doc['Carteira']['TelefoneWhatsApp']['Numero']
-                    }
-                    modelo["contato"].append(contato)
-
-                if 'Celulares' in doc['Carteira']:
-                    for celular in doc['Carteira']['Celulares']:
+                    modelo["endereco"] = {}
+                    if 'EnderecoPrincipal' in doc['Carteira']:
+                        modelo["endereco"]['principal'] = {
+                            "tipo": "principal",
+                            "cep": doc['Carteira']['EnderecoPrincipal']['Cep'],
+                            "bairro": doc['Carteira']['EnderecoPrincipal']['Bairro'],
+                            "logradouro": doc['Carteira']['EnderecoPrincipal']['Logradouro'],
+                            "uf": doc['Carteira']['EnderecoPrincipal']['Municipio']['Uf']['Sigla'],
+                            "codigoMunicipio": str(doc['Carteira']['EnderecoPrincipal']['Municipio']['CodigoIbge']),
+                            "municipio": doc['Carteira']['EnderecoPrincipal']['Municipio']['Nome'],
+                            "numero": doc['Carteira']['EnderecoPrincipal']['Numero']
+                        }
+                    modelo["contato"] = []
+                    if 'TelefonePrincipal' in doc['Carteira']:
                         contato = {
                             "tipo": "telefone",
-                            "contato": celular['Numero']
+                            "contato": doc['Carteira']['TelefonePrincipal']['Numero']
                         }
                         modelo["contato"].append(contato)
 
-            modelo["nome"] = doc['Nome']
-            if 'NomeFantasia' in doc:
-                modelo["fantasia"] = doc['NomeFantasia']
-            modelo["tipoCadastro"] = []
-            if 'Fornecedor' in doc:
-                modelo["tipoCadastro"].append('fornecedor')
-            if 'Cliente' in doc:
-                modelo["tipoCadastro"].append('cliente')
-            if 'Juridica' in doc['_t']:
-                modelo["tipo"] = 'juridica'
-            elif 'Fisica' in doc['_t']:
-                modelo["tipo"] = 'fisica'
-            modelo["_created_at"] = datetime.now()
-            modelo["_updated_at"] = datetime.now()
+                    if 'TelefoneComercial' in doc['Carteira']:
+                        contato = {
+                            "tipo": "telefone",
+                            "contato": doc['Carteira']['TelefoneComercial']['Numero']
+                        }
+                        modelo["contato"].append(contato)
 
-            for empresa in empresas:
-                modelo['_id'] = str(ObjectId())
-                modelo["_p_empresa"] = "Empresa$" + empresa['_id']
+                    if 'TelefoneFax' in doc['Carteira']:
+                        contato = {
+                            "tipo": "telefone",
+                            "contato": doc['Carteira']['TelefoneFax']['Numero']
+                        }
+                        modelo["contato"].append(contato)
+
+                    if 'TelefoneResidencial' in doc['Carteira']:
+                        contato = {
+                            "tipo": "telefone",
+                            "contato": doc['Carteira']['TelefoneResidencial']['Numero']
+                        }
+                        modelo["contato"].append(contato)
+
+                    if 'TelefoneWhatsApp' in doc['Carteira']:
+                        contato = {
+                            "tipo": "telefone",
+                            "contato": doc['Carteira']['TelefoneWhatsApp']['Numero']
+                        }
+                        modelo["contato"].append(contato)
+
+                    if 'Celulares' in doc['Carteira']:
+                        for celular in doc['Carteira']['Celulares']:
+                            contato = {
+                                "tipo": "telefone",
+                                "contato": celular['Numero']
+                            }
+                            modelo["contato"].append(contato)
+
+                modelo["nome"] = doc['Nome']
+                if 'NomeFantasia' in doc:
+                    modelo["fantasia"] = doc['NomeFantasia']
+                modelo["tipoCadastro"] = []
+                if 'Fornecedor' in doc:
+                    modelo["tipoCadastro"].append('fornecedor')
+                if 'Cliente' in doc:
+                    modelo["tipoCadastro"].append('cliente')
+                if 'Juridica' in doc['_t']:
+                    modelo["tipo"] = 'juridica'
+                elif 'Fisica' in doc['_t']:
+                    modelo["tipo"] = 'fisica'
+                modelo["_created_at"] = datetime.now()
+                modelo["_updated_at"] = datetime.now()
+
                 pessoa_collection.insert_one(modelo)
 
     def migrar_tributacao_federal(self):
@@ -281,208 +275,206 @@ class Migrador:
             pipeline,
             allowDiskUse=False
         )
+        for empresa in empresas:
+            for doc in trib_federal_cursor:
+                ipi_entrada = doc['TributacoesIPI'][0]['IpiEntrada']
+                ipi_saida = doc['TributacoesIPI'][0]['IpiSaida']
+                pis_entrada = doc['TributacoesPISCOFINS'][0]['PISEntrada']
+                pis_saida = doc['TributacoesPISCOFINS'][0]['PISSaida']
+                cst_pis_entrada = pis_entrada['CstPISCOFINS']['Codigo']
+                cst_pis_saida = pis_saida['CstPISCOFINS']['Codigo']
 
-        for doc in trib_federal_cursor:
-            ipi_entrada = doc['TributacoesIPI'][0]['IpiEntrada']
-            ipi_saida = doc['TributacoesIPI'][0]['IpiSaida']
-            pis_entrada = doc['TributacoesPISCOFINS'][0]['PISEntrada']
-            pis_saida = doc['TributacoesPISCOFINS'][0]['PISSaida']
-            cst_pis_entrada = pis_entrada['CstPISCOFINS']['Codigo']
-            cst_pis_saida = pis_saida['CstPISCOFINS']['Codigo']
+                cofins_entrada = doc['TributacoesPISCOFINS'][0]['COFINSEntrada']
+                cofins_saida = doc['TributacoesPISCOFINS'][0]['COFINSSaida']
+                cst_cofins_entrada = cofins_entrada['CstPISCOFINS']['Codigo']
+                cst_cofins_saida = cofins_saida['CstPISCOFINS']['Codigo']
 
-            cofins_entrada = doc['TributacoesPISCOFINS'][0]['COFINSEntrada']
-            cofins_saida = doc['TributacoesPISCOFINS'][0]['COFINSSaida']
-            cst_cofins_entrada = cofins_entrada['CstPISCOFINS']['Codigo']
-            cst_cofins_saida = cofins_saida['CstPISCOFINS']['Codigo']
-
-            modelo = {
-                "_id": "",
-                "ativo": doc['Ativo'],
-                "nome": doc['Descricao'],
-                "descricao": doc['Descricao'],
-                "ipi": {
-                    "entrada": {
-                        "tipo": "entrada",
-                        "cst": str(ipi_entrada['CstIPI']['Codigo']).zfill(2),
-                        "codigoEnquadramento": str(ipi_entrada['CodigoEnquadramentoIPI']['Codigo']),
+                modelo = {
+                    "_id": str(ObjectId()),
+                    "ativo": doc['Ativo'],
+                    "nome": doc['Descricao'],
+                    "descricao": doc['Descricao'],
+                    "ipi": {
+                        "entrada": {
+                            "tipo": "entrada",
+                            "cst": str(ipi_entrada['CstIPI']['Codigo']).zfill(2),
+                            "codigoEnquadramento": str(ipi_entrada['CodigoEnquadramentoIPI']['Codigo']),
+                        },
+                        "saida": {
+                            "tipo": "saida",
+                            "cst": str(ipi_saida['CstIPI']['Codigo']).zfill(2),
+                            "codigoEnquadramento": str(ipi_saida['CodigoEnquadramentoIPI']['Codigo']),
+                        }
                     },
-                    "saida": {
-                        "tipo": "saida",
-                        "cst": str(ipi_saida['CstIPI']['Codigo']).zfill(2),
-                        "codigoEnquadramento": str(ipi_saida['CodigoEnquadramentoIPI']['Codigo']),
-                    }
-                },
-                "pis": {
-                    "entrada": {
-                        "tipo": "entrada",
-                        "cst": str(cst_pis_entrada).zfill(2),
+                    "pis": {
+                        "entrada": {
+                            "tipo": "entrada",
+                            "cst": str(cst_pis_entrada).zfill(2),
+                        },
+                        "saida": {
+                            "tipo": "saida",
+                            "cst": str(cst_pis_saida).zfill(2),
+                        }
                     },
-                    "saida": {
-                        "tipo": "saida",
-                        "cst": str(cst_pis_saida).zfill(2),
-                    }
-                },
-                "cofins": {
-                    "entrada": {
-                        "tipo": "entrada",
-                        "cst": str(cst_cofins_entrada).zfill(2),
+                    "cofins": {
+                        "entrada": {
+                            "tipo": "entrada",
+                            "cst": str(cst_cofins_entrada).zfill(2),
+                        },
+                        "saida": {
+                            "tipo": "saida",
+                            "cst": str(cst_cofins_saida).zfill(2),
+                        }
                     },
-                    "saida": {
-                        "tipo": "saida",
-                        "cst": str(cst_cofins_saida).zfill(2),
-                    }
-                },
-                "_p_empresa": ""
-            }
-            # IPI Entrada
-            if 'PercentualBaseCalculo' in ipi_entrada:
-                modelo["ipi"]["entrada"]["baseCalculo"] = ipi_entrada['PercentualBaseCalculo']
+                    "_p_empresa": "Empresa$" + empresa['_id']
+                }
+                # IPI Entrada
+                if 'PercentualBaseCalculo' in ipi_entrada:
+                    modelo["ipi"]["entrada"]["baseCalculo"] = ipi_entrada['PercentualBaseCalculo']
 
-            if 'Percentual' in ipi_entrada:
-                modelo["ipi"]["entrada"]["percentual"] = ipi_entrada['Percentual']
-                modelo["ipi"]["entrada"]["valorUnidade"] = 0
-                modelo["ipi"]["entrada"]["tipoCalculo"] = 'percentual'
+                if 'Percentual' in ipi_entrada:
+                    modelo["ipi"]["entrada"]["percentual"] = ipi_entrada['Percentual']
+                    modelo["ipi"]["entrada"]["valorUnidade"] = 0
+                    modelo["ipi"]["entrada"]["tipoCalculo"] = 'percentual'
 
-            if 'ValorUnidadeIpi' in ipi_entrada:
-                modelo["ipi"]["entrada"]["percentual"] = 0
-                modelo["ipi"]["entrada"]["valorUnidade"] = ipi_entrada['ValorUnidadeIpi']
-                modelo["ipi"]["entrada"]["tipoCalculo"] = 'unidade'
+                if 'ValorUnidadeIpi' in ipi_entrada:
+                    modelo["ipi"]["entrada"]["percentual"] = 0
+                    modelo["ipi"]["entrada"]["valorUnidade"] = ipi_entrada['ValorUnidadeIpi']
+                    modelo["ipi"]["entrada"]["tipoCalculo"] = 'unidade'
 
-            # IPI Saida
-            if 'PercentualBaseCalculo' in ipi_saida:
-                modelo["ipi"]["saida"]["baseCalculo"] = ipi_saida['PercentualBaseCalculo']
+                # IPI Saida
+                if 'PercentualBaseCalculo' in ipi_saida:
+                    modelo["ipi"]["saida"]["baseCalculo"] = ipi_saida['PercentualBaseCalculo']
 
-            if 'Percentual' in ipi_saida:
-                modelo["ipi"]["saida"]["percentual"] = ipi_saida['Percentual']
-                modelo["ipi"]["saida"]["valorUnidade"] = 0
-                modelo["ipi"]["saida"]["tipoCalculo"] = 'percentual'
+                if 'Percentual' in ipi_saida:
+                    modelo["ipi"]["saida"]["percentual"] = ipi_saida['Percentual']
+                    modelo["ipi"]["saida"]["valorUnidade"] = 0
+                    modelo["ipi"]["saida"]["tipoCalculo"] = 'percentual'
 
-            if 'ValorUnidadeIpi' in ipi_saida:
-                modelo["ipi"]["saida"]["percentual"] = 0
-                modelo["ipi"]["saida"]["valorUnidade"] = ipi_saida['ValorUnidadeIpi']
-                modelo["ipi"]["saida"]["tipoCalculo"] = 'unidade'
+                if 'ValorUnidadeIpi' in ipi_saida:
+                    modelo["ipi"]["saida"]["percentual"] = 0
+                    modelo["ipi"]["saida"]["valorUnidade"] = ipi_saida['ValorUnidadeIpi']
+                    modelo["ipi"]["saida"]["tipoCalculo"] = 'unidade'
 
-            # PIS Entrada
-            if 'PercentualBaseCalculo' in pis_entrada:
-                modelo["pis"]["entrada"]["baseCalculo"] = 0
-                modelo["pis"]["entrada"]["baseCalculoST"] = 0
+                # PIS Entrada
+                if 'PercentualBaseCalculo' in pis_entrada:
+                    modelo["pis"]["entrada"]["baseCalculo"] = 0
+                    modelo["pis"]["entrada"]["baseCalculoST"] = 0
 
-                # verificando se bota tags de substituicao ou as normais
-                if cst_pis_entrada in [75]:
-                    modelo["pis"]["entrada"]["baseCalculoST"] = pis_entrada['PercentualBaseCalculo']
-                else:
-                    modelo["pis"]["entrada"]["baseCalculo"] = pis_entrada['PercentualBaseCalculo']
+                    # verificando se bota tags de substituicao ou as normais
+                    if cst_pis_entrada in [75]:
+                        modelo["pis"]["entrada"]["baseCalculoST"] = pis_entrada['PercentualBaseCalculo']
+                    else:
+                        modelo["pis"]["entrada"]["baseCalculo"] = pis_entrada['PercentualBaseCalculo']
 
-            if 'Percentual' in pis_entrada:
-                modelo["pis"]["entrada"]["percentual"] = 0
-                modelo["pis"]["entrada"]["percentualST"] = 0
+                if 'Percentual' in pis_entrada:
+                    modelo["pis"]["entrada"]["percentual"] = 0
+                    modelo["pis"]["entrada"]["percentualST"] = 0
 
-                # verificando se bota tags de substituicao ou as normais
-                if cst_pis_entrada in [75]:
-                    modelo["pis"]["entrada"]["percentualST"] = pis_entrada['Percentual']
-                else:
-                    modelo["pis"]["entrada"]["percentual"] = pis_entrada['Percentual']
-                modelo["pis"]["entrada"]["valorUnidade"] = 0
-                modelo["pis"]["entrada"]["tipoCalculo"] = 'percentual'
+                    # verificando se bota tags de substituicao ou as normais
+                    if cst_pis_entrada in [75]:
+                        modelo["pis"]["entrada"]["percentualST"] = pis_entrada['Percentual']
+                    else:
+                        modelo["pis"]["entrada"]["percentual"] = pis_entrada['Percentual']
+                    modelo["pis"]["entrada"]["valorUnidade"] = 0
+                    modelo["pis"]["entrada"]["tipoCalculo"] = 'percentual'
 
-            if 'ValorUnidade' in pis_entrada:
-                modelo["pis"]["entrada"]["percentual"] = 0
-                modelo["pis"]["entrada"]["percentualST"] = 0
-                modelo["pis"]["entrada"]["valorUnidade"] = pis_entrada['ValorUnidade']
-                modelo["pis"]["entrada"]["tipoCalculo"] = 'unidade'
+                if 'ValorUnidade' in pis_entrada:
+                    modelo["pis"]["entrada"]["percentual"] = 0
+                    modelo["pis"]["entrada"]["percentualST"] = 0
+                    modelo["pis"]["entrada"]["valorUnidade"] = pis_entrada['ValorUnidade']
+                    modelo["pis"]["entrada"]["tipoCalculo"] = 'unidade'
 
-            # PIS Saida
-            if 'PercentualBaseCalculo' in pis_saida:
-                modelo["pis"]["saida"]["baseCalculo"] = 0
-                modelo["pis"]["saida"]["baseCalculoST"] = 0
+                # PIS Saida
+                if 'PercentualBaseCalculo' in pis_saida:
+                    modelo["pis"]["saida"]["baseCalculo"] = 0
+                    modelo["pis"]["saida"]["baseCalculoST"] = 0
 
-                # verificando se bota tags de substituicao ou as normais
-                if cst_pis_entrada in [75]:
-                    modelo["pis"]["saida"]["baseCalculoST"] = pis_saida['PercentualBaseCalculo']
-                else:
-                    modelo["pis"]["saida"]["baseCalculo"] = pis_saida['PercentualBaseCalculo']
+                    # verificando se bota tags de substituicao ou as normais
+                    if cst_pis_entrada in [75]:
+                        modelo["pis"]["saida"]["baseCalculoST"] = pis_saida['PercentualBaseCalculo']
+                    else:
+                        modelo["pis"]["saida"]["baseCalculo"] = pis_saida['PercentualBaseCalculo']
 
-            if 'Percentual' in pis_saida:
-                modelo["pis"]["saida"]["percentual"] = 0
-                modelo["pis"]["saida"]["percentualST"] = 0
+                if 'Percentual' in pis_saida:
+                    modelo["pis"]["saida"]["percentual"] = 0
+                    modelo["pis"]["saida"]["percentualST"] = 0
 
-                # verificando se bota tags de substituicao ou as normais
-                if cst_pis_saida in [5]:
-                    modelo["pis"]["saida"]["percentualST"] = pis_saida['Percentual']
-                else:
-                    modelo["pis"]["saida"]["percentual"] = pis_saida['Percentual']
-                modelo["pis"]["saida"]["valorUnidade"] = 0
-                modelo["pis"]["saida"]["tipoCalculo"] = 'percentual'
+                    # verificando se bota tags de substituicao ou as normais
+                    if cst_pis_saida in [5]:
+                        modelo["pis"]["saida"]["percentualST"] = pis_saida['Percentual']
+                    else:
+                        modelo["pis"]["saida"]["percentual"] = pis_saida['Percentual']
+                    modelo["pis"]["saida"]["valorUnidade"] = 0
+                    modelo["pis"]["saida"]["tipoCalculo"] = 'percentual'
 
-            if 'ValorUnidade' in pis_saida:
-                modelo["pis"]["saida"]["percentual"] = 0
-                modelo["pis"]["saida"]["percentualST"] = 0
-                modelo["pis"]["saida"]["valorUnidade"] = pis_saida['ValorUnidade']
-                modelo["pis"]["saida"]["tipoCalculo"] = 'unidade'
+                if 'ValorUnidade' in pis_saida:
+                    modelo["pis"]["saida"]["percentual"] = 0
+                    modelo["pis"]["saida"]["percentualST"] = 0
+                    modelo["pis"]["saida"]["valorUnidade"] = pis_saida['ValorUnidade']
+                    modelo["pis"]["saida"]["tipoCalculo"] = 'unidade'
 
-            # COFINS Entrada
-            if 'PercentualBaseCalculo' in cofins_entrada:
-                modelo["cofins"]["entrada"]["baseCalculo"] = 0
-                modelo["cofins"]["entrada"]["baseCalculoST"] = 0
+                # COFINS Entrada
+                if 'PercentualBaseCalculo' in cofins_entrada:
+                    modelo["cofins"]["entrada"]["baseCalculo"] = 0
+                    modelo["cofins"]["entrada"]["baseCalculoST"] = 0
 
-                # verificando se bota tags de substituicao ou as normais
-                if cst_cofins_entrada in [75]:
-                    modelo["cofins"]["entrada"]["baseCalculoST"] = cofins_entrada['PercentualBaseCalculo']
-                else:
-                    modelo["cofins"]["entrada"]["baseCalculo"] = cofins_entrada['PercentualBaseCalculo']
+                    # verificando se bota tags de substituicao ou as normais
+                    if cst_cofins_entrada in [75]:
+                        modelo["cofins"]["entrada"]["baseCalculoST"] = cofins_entrada['PercentualBaseCalculo']
+                    else:
+                        modelo["cofins"]["entrada"]["baseCalculo"] = cofins_entrada['PercentualBaseCalculo']
 
-            if 'Percentual' in cofins_entrada:
-                modelo["cofins"]["entrada"]["percentual"] = 0
-                modelo["cofins"]["entrada"]["percentualST"] = 0
+                if 'Percentual' in cofins_entrada:
+                    modelo["cofins"]["entrada"]["percentual"] = 0
+                    modelo["cofins"]["entrada"]["percentualST"] = 0
 
-                # verificando se bota tags de substituicao ou as normais
-                if cst_cofins_entrada in [75]:
-                    modelo["cofins"]["entrada"]["percentualST"] = cofins_entrada['Percentual']
-                else:
-                    modelo["cofins"]["entrada"]["percentual"] = cofins_entrada['Percentual']
-                modelo["cofins"]["entrada"]["valorUnidade"] = 0
-                modelo["cofins"]["entrada"]["tipoCalculo"] = 'percentual'
+                    # verificando se bota tags de substituicao ou as normais
+                    if cst_cofins_entrada in [75]:
+                        modelo["cofins"]["entrada"]["percentualST"] = cofins_entrada['Percentual']
+                    else:
+                        modelo["cofins"]["entrada"]["percentual"] = cofins_entrada['Percentual']
+                    modelo["cofins"]["entrada"]["valorUnidade"] = 0
+                    modelo["cofins"]["entrada"]["tipoCalculo"] = 'percentual'
 
-            if 'ValorUnidade' in cofins_entrada:
-                modelo["cofins"]["entrada"]["percentual"] = 0
-                modelo["cofins"]["entrada"]["percentualST"] = 0
-                modelo["cofins"]["entrada"]["valorUnidade"] = cofins_entrada['ValorUnidade']
-                modelo["cofins"]["entrada"]["tipoCalculo"] = 'unidade'
+                if 'ValorUnidade' in cofins_entrada:
+                    modelo["cofins"]["entrada"]["percentual"] = 0
+                    modelo["cofins"]["entrada"]["percentualST"] = 0
+                    modelo["cofins"]["entrada"]["valorUnidade"] = cofins_entrada['ValorUnidade']
+                    modelo["cofins"]["entrada"]["tipoCalculo"] = 'unidade'
 
-            # COFINS Saida
-            if 'PercentualBaseCalculo' in cofins_saida:
-                modelo["cofins"]["saida"]["baseCalculo"] = 0
-                modelo["cofins"]["saida"]["baseCalculoST"] = 0
+                # COFINS Saida
+                if 'PercentualBaseCalculo' in cofins_saida:
+                    modelo["cofins"]["saida"]["baseCalculo"] = 0
+                    modelo["cofins"]["saida"]["baseCalculoST"] = 0
 
-                # verificando se bota tags de substituicao ou as normais
-                if cst_cofins_entrada in [75]:
-                    modelo["cofins"]["saida"]["baseCalculoST"] = cofins_saida['PercentualBaseCalculo']
-                else:
-                    modelo["cofins"]["saida"]["baseCalculo"] = cofins_saida['PercentualBaseCalculo']
+                    # verificando se bota tags de substituicao ou as normais
+                    if cst_cofins_entrada in [75]:
+                        modelo["cofins"]["saida"]["baseCalculoST"] = cofins_saida['PercentualBaseCalculo']
+                    else:
+                        modelo["cofins"]["saida"]["baseCalculo"] = cofins_saida['PercentualBaseCalculo']
 
-            if 'Percentual' in cofins_saida:
-                modelo["cofins"]["saida"]["percentual"] = 0
-                modelo["cofins"]["saida"]["percentualST"] = 0
+                if 'Percentual' in cofins_saida:
+                    modelo["cofins"]["saida"]["percentual"] = 0
+                    modelo["cofins"]["saida"]["percentualST"] = 0
 
-                # verificando se bota tags de substituicao ou as normais
-                if cst_cofins_saida in [5]:
-                    modelo["cofins"]["saida"]["percentualST"] = cofins_saida['Percentual']
-                else:
-                    modelo["cofins"]["saida"]["percentual"] = cofins_saida['Percentual']
-                modelo["cofins"]["saida"]["valorUnidade"] = 0
-                modelo["cofins"]["saida"]["tipoCalculo"] = 'percentual'
+                    # verificando se bota tags de substituicao ou as normais
+                    if cst_cofins_saida in [5]:
+                        modelo["cofins"]["saida"]["percentualST"] = cofins_saida['Percentual']
+                    else:
+                        modelo["cofins"]["saida"]["percentual"] = cofins_saida['Percentual']
+                    modelo["cofins"]["saida"]["valorUnidade"] = 0
+                    modelo["cofins"]["saida"]["tipoCalculo"] = 'percentual'
 
-            if 'ValorUnidade' in cofins_saida:
-                modelo["cofins"]["saida"]["percentual"] = 0
-                modelo["cofins"]["saida"]["percentualST"] = 0
-                modelo["cofins"]["saida"]["valorUnidade"] = cofins_saida['ValorUnidade']
-                modelo["cofins"]["saida"]["tipoCalculo"] = 'unidade'
+                if 'ValorUnidade' in cofins_saida:
+                    modelo["cofins"]["saida"]["percentual"] = 0
+                    modelo["cofins"]["saida"]["percentualST"] = 0
+                    modelo["cofins"]["saida"]["valorUnidade"] = cofins_saida['ValorUnidade']
+                    modelo["cofins"]["saida"]["tipoCalculo"] = 'unidade'
 
-            modelo["_created_at"] = datetime.now()
-            modelo["_updated_at"] = datetime.now()
-            for empresa in empresas:
-                modelo['_id'] = str(ObjectId())
-                modelo["_p_empresa"] = "Empresa$" + empresa['_id']
+                modelo["_created_at"] = datetime.now()
+                modelo["_updated_at"] = datetime.now()
+
                 trib_federal1_collection.insert_one(modelo)
 
     def migrar_tributacao_estadual(self):
@@ -491,145 +483,142 @@ class Migrador:
         trib_estadual1_colletion = self.database["TributacaoEstadual"]
         op_fiscal_colletion = self.database["OperacoesFiscais"]
         cursor = trib_estadual_colletion.find({})
-
-        for doc in cursor:
-            nao_contribuinte = []
-            contribuinte = []
-            industria = []
-            publico = []
-            for uf_tributacao in doc['UfsTributacao']:
-                sigla_uf = uf_tributacao['Uf']['Sigla']
-                trib: dict = {}
-                modelo_percentual = {
-                    sigla_uf: {
-                        "bc": 0,  # OK
-                        "tipo": "",  # OK
-                        "fcpRetido": 0,  # Não identificado
-                        "diferimento": 0,  # Ignorar dito por Rick
-                        "cst": "",  # OK
-                        "creditoIcmsSN": 0,  # OK
-                        "origem": "",  # OK
-                        "cfop": "",  # OK
-                        "bcST": 0,  # OK
-                        "bcOperacaoPropria": 0,  # Não usado dito por gabriel
-                        "uf": "",  # OK
-                        "icms": 0,  # OK
-                        "icmsInterno": 0,  # OK
-                        "fcp": 0,  # OK
-                        "fcpRetidoST": 0,  # Não identificado
-                        "icmsEfetivo": 0,  # OK
-                        "icmsST": 0,
-                        "bcIcmsEfetivo": 0,  # Não usado dito por gabriel
-                        "fcpUFDestino": 0,  # OK
-                        "icmsInterestadual": 0,  # Não usado dito por gabriel
-                        "fcpST": 0,  # OK
-                        "mva": 0,  # OK
-                        "icmsRetidoST": 0  # OK
+        for empresa in empresas:
+            for doc in cursor:
+                nao_contribuinte = []
+                contribuinte = []
+                industria = []
+                publico = []
+                for uf_tributacao in doc['UfsTributacao']:
+                    sigla_uf = uf_tributacao['Uf']['Sigla']
+                    trib: dict = {}
+                    modelo_percentual = {
+                        sigla_uf: {
+                            "bc": 0,  # OK
+                            "tipo": "",  # OK
+                            "fcpRetido": 0,  # Não identificado
+                            "diferimento": 0,  # Ignorar dito por Rick
+                            "cst": "",  # OK
+                            "creditoIcmsSN": 0,  # OK
+                            "origem": "",  # OK
+                            "cfop": "",  # OK
+                            "bcST": 0,  # OK
+                            "bcOperacaoPropria": 0,  # Não usado dito por gabriel
+                            "uf": "",  # OK
+                            "icms": 0,  # OK
+                            "icmsInterno": 0,  # OK
+                            "fcp": 0,  # OK
+                            "fcpRetidoST": 0,  # Não identificado
+                            "icmsEfetivo": 0,  # OK
+                            "icmsST": 0,
+                            "bcIcmsEfetivo": 0,  # Não usado dito por gabriel
+                            "fcpUFDestino": 0,  # OK
+                            "icmsInterestadual": 0,  # Não usado dito por gabriel
+                            "fcpST": 0,  # OK
+                            "mva": 0,  # OK
+                            "icmsRetidoST": 0  # OK
+                        }
                     }
+                    if 'NaoContribuinte' in uf_tributacao:
+                        trib = uf_tributacao['NaoContribuinte']
+                        modelo_percentual[sigla_uf]['tipo'] = "naoContribuinte"
+                    elif 'Contribuinte' in uf_tributacao:
+                        trib = uf_tributacao['Contribuinte']
+                        modelo_percentual[sigla_uf]['tipo'] = "contribuinte"
+                    elif 'Industria' in uf_tributacao:
+                        trib = uf_tributacao['Industria']
+                        modelo_percentual[sigla_uf]['tipo'] = "industria"
+                    elif 'Publico' in uf_tributacao:
+                        trib = uf_tributacao['Publico']
+                        modelo_percentual[sigla_uf]['tipo'] = "publico"
+                    modelo_percentual[sigla_uf]['uf'] = sigla_uf
+                    modelo_percentual[sigla_uf]['cst'] = str(trib['SituacaoTributaria']['Codigo']).zfill(2)
+                    modelo_percentual[sigla_uf]['origem'] = str(trib['OrigemMercadoria']['Codigo'])
+                    op_fiscal = op_fiscal_colletion.find_one({"_id": trib['OperacaoFiscalReferencia']})
+                    modelo_percentual[sigla_uf]['cfop'] = str(op_fiscal['Cfop']['Codigo'])
+
+                    if 'PercentualSimplesNacional' in trib:
+                        modelo_percentual[sigla_uf]['creditoIcmsSN'] = trib['PercentualSimplesNacional']
+
+                    if 'PercentualIcms' in trib:
+                        modelo_percentual[sigla_uf]['icms'] = trib['PercentualIcms']
+
+                    if 'PercentualInterno' in trib:
+                        modelo_percentual[sigla_uf]['icmsInterno'] = trib['PercentualInterno']
+
+                    if 'PercentualIcmsEfetivo' in trib:
+                        modelo_percentual[sigla_uf]['icmsEfetivo'] = trib['PercentualIcmsEfetivo']
+
+                    if 'PercentualIcms' in trib:
+                        modelo_percentual[sigla_uf]['icmsEfetivo'] = trib['PercentualIcms']
+
+                    if 'PercentualBaseCalculo' in trib:
+                        modelo_percentual[sigla_uf]['bc'] = trib['PercentualBaseCalculo']
+
+                    # ST
+                    if 'PercentualSubstituicaoTributaria' in trib:
+                        modelo_percentual[sigla_uf]['icmsST'] = trib['PercentualSubstituicaoTributaria']
+
+                    if 'PercentualMva' in trib:
+                        modelo_percentual[sigla_uf]['mva'] = trib['PercentualMva']
+
+                    if 'PercentualBaseCalculoSt' in trib:
+                        modelo_percentual[sigla_uf]['bcST'] = trib['PercentualBaseCalculoSt']
+
+                    # FCP
+                    if 'PercentualFundoCombatePobrezaInterno' in trib:
+                        modelo_percentual[sigla_uf]['fcp'] = trib['PercentualFundoCombatePobrezaInterno']
+
+                    if 'PercentualFundoCombatePobrezaStInterno' in trib:
+                        modelo_percentual[sigla_uf]['fcpST'] = trib['PercentualFundoCombatePobrezaStInterno']
+
+                    if 'PercentualFundoCombatePobreza' in trib:
+                        modelo_percentual[sigla_uf]['fcpUFDestino'] = trib['PercentualFundoCombatePobreza']
+
+                    # Retenção
+                    if 'ValorIcmsStRetido' in trib:
+                        modelo_percentual[sigla_uf]['icmsRetidoST'] = trib['ValorIcmsStRetido']
+
+                    if 'NaoContribuinte' in uf_tributacao:
+                        nao_contribuinte.append(modelo_percentual)
+                    elif 'Contribuinte' in uf_tributacao:
+                        contribuinte.append(modelo_percentual)
+                    elif 'Industria' in uf_tributacao:
+                        industria.append(modelo_percentual)
+                    elif 'Publico' in uf_tributacao:
+                        publico.append(modelo_percentual)
+                modelo = {
+                    "_id": str(ObjectId()),
+                    "_p_empresa": "Empresa$" + empresa['_id'],
+                    "percentual": {},
+                    "nome": doc['Descricao'],
+                    "ativo": True,
+                    "_created_at": datetime.now(),
+                    "_updated_at": datetime.now(),
+                    "descricao": doc['Descricao'],
+                    "percentualUF": [
+                        {
+                            "uf": doc['Uf']['Sigla'],
+                            "tipo": "naoContribuinte",
+                            "observacao": "00",
+                            "origem": "0",
+                            "csosn": "102",
+                            "cfop": "5102"
+                        }
+                    ]
                 }
-                if 'NaoContribuinte' in uf_tributacao:
-                    trib = uf_tributacao['NaoContribuinte']
-                    modelo_percentual[sigla_uf]['tipo'] = "naoContribuinte"
-                elif 'Contribuinte' in uf_tributacao:
-                    trib = uf_tributacao['Contribuinte']
-                    modelo_percentual[sigla_uf]['tipo'] = "contribuinte"
-                elif 'Industria' in uf_tributacao:
-                    trib = uf_tributacao['Industria']
-                    modelo_percentual[sigla_uf]['tipo'] = "industria"
-                elif 'Publico' in uf_tributacao:
-                    trib = uf_tributacao['Publico']
-                    modelo_percentual[sigla_uf]['tipo'] = "publico"
-                modelo_percentual[sigla_uf]['uf'] = sigla_uf
-                modelo_percentual[sigla_uf]['cst'] = str(trib['SituacaoTributaria']['Codigo']).zfill(2)
-                modelo_percentual[sigla_uf]['origem'] = str(trib['OrigemMercadoria']['Codigo'])
-                op_fiscal = op_fiscal_colletion.find_one({"_id": trib['OperacaoFiscalReferencia']})
-                modelo_percentual[sigla_uf]['cfop'] = str(op_fiscal['Cfop']['Codigo'])
+                if len(nao_contribuinte) > 0:
+                    modelo['percentual']['naoContribuinte'] = nao_contribuinte
 
-                if 'PercentualSimplesNacional' in trib:
-                    modelo_percentual[sigla_uf]['creditoIcmsSN'] = trib['PercentualSimplesNacional']
+                if len(contribuinte) > 0:
+                    modelo['percentual']['contribuinte'] = contribuinte
 
-                if 'PercentualIcms' in trib:
-                    modelo_percentual[sigla_uf]['icms'] = trib['PercentualIcms']
+                if len(industria) > 0:
+                    modelo['percentual']['industria'] = industria
 
-                if 'PercentualInterno' in trib:
-                    modelo_percentual[sigla_uf]['icmsInterno'] = trib['PercentualInterno']
+                if len(publico) > 0:
+                    modelo['percentual']['industria'] = publico
 
-                if 'PercentualIcmsEfetivo' in trib:
-                    modelo_percentual[sigla_uf]['icmsEfetivo'] = trib['PercentualIcmsEfetivo']
-
-                if 'PercentualIcms' in trib:
-                    modelo_percentual[sigla_uf]['icmsEfetivo'] = trib['PercentualIcms']
-
-                if 'PercentualBaseCalculo' in trib:
-                    modelo_percentual[sigla_uf]['bc'] = trib['PercentualBaseCalculo']
-
-                # ST
-                if 'PercentualSubstituicaoTributaria' in trib:
-                    modelo_percentual[sigla_uf]['icmsST'] = trib['PercentualSubstituicaoTributaria']
-
-                if 'PercentualMva' in trib:
-                    modelo_percentual[sigla_uf]['mva'] = trib['PercentualMva']
-
-                if 'PercentualBaseCalculoSt' in trib:
-                    modelo_percentual[sigla_uf]['bcST'] = trib['PercentualBaseCalculoSt']
-
-                # FCP
-                if 'PercentualFundoCombatePobrezaInterno' in trib:
-                    modelo_percentual[sigla_uf]['fcp'] = trib['PercentualFundoCombatePobrezaInterno']
-
-                if 'PercentualFundoCombatePobrezaStInterno' in trib:
-                    modelo_percentual[sigla_uf]['fcpST'] = trib['PercentualFundoCombatePobrezaStInterno']
-
-                if 'PercentualFundoCombatePobreza' in trib:
-                    modelo_percentual[sigla_uf]['fcpUFDestino'] = trib['PercentualFundoCombatePobreza']
-
-                # Retenção
-                if 'ValorIcmsStRetido' in trib:
-                    modelo_percentual[sigla_uf]['icmsRetidoST'] = trib['ValorIcmsStRetido']
-
-                if 'NaoContribuinte' in uf_tributacao:
-                    nao_contribuinte.append(modelo_percentual)
-                elif 'Contribuinte' in uf_tributacao:
-                    contribuinte.append(modelo_percentual)
-                elif 'Industria' in uf_tributacao:
-                    industria.append(modelo_percentual)
-                elif 'Publico' in uf_tributacao:
-                    publico.append(modelo_percentual)
-            modelo = {
-                "_id": "",
-                "_p_empresa": "",
-                "percentual": {},
-                "nome": doc['Descricao'],
-                "ativo": True,
-                "_created_at": datetime.now(),
-                "_updated_at": datetime.now(),
-                "descricao": doc['Descricao'],
-                "percentualUF": [
-                    {
-                        "uf": doc['Uf']['Sigla'],
-                        "tipo": "naoContribuinte",
-                        "observacao": "00",
-                        "origem": "0",
-                        "csosn": "102",
-                        "cfop": "5102"
-                    }
-                ]
-            }
-            if len(nao_contribuinte) > 0:
-                modelo['percentual']['naoContribuinte'] = nao_contribuinte
-
-            if len(contribuinte) > 0:
-                modelo['percentual']['contribuinte'] = contribuinte
-
-            if len(industria) > 0:
-                modelo['percentual']['industria'] = industria
-
-            if len(publico) > 0:
-                modelo['percentual']['industria'] = publico
-
-            for empresa in empresas:
-                modelo['_id'] = str(ObjectId())
-                modelo['_p_empresa'] = "Empresa$" + empresa['_id']
                 trib_estadual1_colletion.insert_one(modelo)
 
     def migrar_unidades_medida(self):
@@ -638,19 +627,18 @@ class Migrador:
         uni_med1_collection = self.database1["UnidadeMedida"]
 
         cursor = uni_med_collection.find({})
-        for doc in cursor:
-            modelo = {
-                "_id": "",
-                "ativo": True,
-                "nome": doc['Descricao'],
-                "sigla": doc['Sigla'],
-                "_p_empresa": "",
-                "_created_at": datetime.now(),
-                "_updated_at": datetime.now()
-            }
-            for empresa in empresas:
-                modelo['_id'] = str(ObjectId())
-                modelo['_p_empresa'] = "Empresa$" + empresa['_id']
+        for empresa in empresas:
+            for doc in cursor:
+                modelo = {
+                    "_id": str(ObjectId()),
+                    "ativo": True,
+                    "nome": doc['Descricao'],
+                    "sigla": doc['Sigla'],
+                    "_p_empresa": "Empresa$" + empresa['_id'],
+                    "_created_at": datetime.now(),
+                    "_updated_at": datetime.now()
+                }
+
                 uni_med1_collection.insert_one(modelo)
 
     def migrar_produtos(self):
@@ -708,108 +696,111 @@ class Migrador:
                     u"foreignField": u"_id",
                     u"as": u"SubGrupos"
                 }
-            }
+            },
         ]
 
         cursor = produtos_collection.aggregate(
             pipeline,
             allowDiskUse=False
         )
-        for doc in cursor:
-            query = {
-                "ativo": doc['SubGrupos'][0]['Ativo'],
-                "nome": doc['SubGrupos'][0]['Descricao']
-            }
-            sub_grupo = sub_grupo_collection.find_one(query)
-
-            query = {
-                "sigla": doc['ProdutosServicos'][0]['UnidadeMedida']['Sigla']
-            }
-            unidade_medida = uni_med1_collection.find_one(query)
-
-            query = {
-                "ativo": doc['TributacoesFederal'][0]['Ativo'],
-                "nome": doc['TributacoesFederal'][0]['Descricao']
-            }
-            tributacao_federal = trib_federal1_collection.find_one(query)
-
-            modelo = {
-                "precoAtacado": 0,
-                "precoCustoMedio": 0,
-                "precoCusto": doc['Precos'][0]['Custo']['Valor'],
-                "precoCustoReal": 0,
-                "_p_unidadeMedidaTributavel": "UnidadeMedida$"+unidade_medida['_id'],
-                "preco": doc['Precos'][0]['Venda']['Valor'],
-                "ativo": doc['Ativo'],
-                "_p_subgrupo": "Subgrupo$"+sub_grupo['_id'],
-                "_p_tributacaoFederal": "TributacaoFederal$"+tributacao_federal['_id'],
-                "nome": doc['ProdutosServicos'][0]['Descricao'],
-                "_p_unidadeMedida": "UnidadeMedida$"+unidade_medida['_id'],
-                "estoque": 0,
-                "fator": 1,
-                "classificacao": "produto",
-                "quantidadeAtacado": 0,
-                "codigoInterno": doc['ProdutosServicos'][0]['CodigoInterno'],
-                "ncm": doc['NcmNbs']['Codigo'],
-                "tipoEstoque": "normal",
-                "estoqueMaximo": doc['Estoques'][0]['QuantidadeMaxima'],
-                "_p_tributacaoEstadual": "TributacaoEstadual$DV6r7ksZtb",
-                "estoqueMinimo": doc['Estoques'][0]['QuantidadeMinima'],
-                "_created_at": datetime.now(),
-                "_updated_at": datetime.now(),
-                "caracteristica": None,
-                "cest": None,
-                "descontoMaximo": doc['LimiteDesconto'],
-                "vendavel": doc['ProdutosServicos'][0]['Vendavel']
-            }
-            
-            if 'Caracteristica' in doc['ProdutosServicos'][0]:
-                modelo["caracteristica"] = doc['ProdutosServicos'][0]['Caracteristica']
-
-            if 'CodigoEspecificadorSubstituicaoTributaria' in doc:
-                modelo["cest"] = doc['CodigoEspecificadorSubstituicaoTributaria']
-
-            if 'Medicamento' in doc['ProdutosServicos'][0]['_t']:
-                modelo["classificacao"] = "medicamento"
-                modelo["medicamento"] = {
-                    "registroMS": doc['ProdutosServicos'][0]["RegistroMinisterioSaude"],
-                }
-
-                if 'Antimicrobiano' == doc['ProdutosServicos'][0]["ClasseTerapeutica"]['_t']:
-                    modelo["medicamento"]["classeTerapeutica"] = "1"
-
-                if 'SujeitoAControleEspecial' == doc['ProdutosServicos'][0]["ClasseTerapeutica"]['_t']:
-                    modelo["medicamento"]["classeTerapeutica"] = "2"
-
-                if 'PrecoMaximoConsumidor' in doc['ProdutosServicos'][0]:
-                    modelo["medicamento"]["PMC"] = doc['ProdutosServicos'][0]['PrecoMaximoConsumidor']
-
-                if 'Sim' == doc['ProdutosServicos'][0]['UsoProlongado']['_t']:
-                    modelo["medicamento"]["usoProlongado"] = True
-                elif 'Nao' == doc['ProdutosServicos'][0]['UsoProlongado']['_t']:
-                    modelo["medicamento"]["usoProlongado"] = False
-
-            if 'CodigoBarras' in doc['ProdutosServicos'][0]:
-                modelo["cean"] = [
-                    {
-                        "cean": doc['ProdutosServicos'][0]['CodigoBarras'],
-                        "fator": 1
-                    }
-                ]
-
-            if 'EstoqueLote' in doc['Estoques'][0]['_t']:
-                modelo["tipoEstoque"] = "lote"
-
-            if 'UnidadeMedidaTributavel' in doc['ProdutosServicos'][0]:
+        for empresa in empresas:
+            for doc in cursor:
                 query = {
                     "sigla": doc['ProdutosServicos'][0]['UnidadeMedida']['Sigla']
                 }
                 unidade_medida = uni_med1_collection.find_one(query)
-                modelo['_p_unidadeMedidaTributavel'] = "UnidadeMedida$"+unidade_medida['_id']
+                print('\n\n\n\n')
+                print(doc)
+                query = {
+                    "ativo": doc['TributacoesFederal'][0]['Ativo'],
+                    "nome": doc['TributacoesFederal'][0]['Descricao']
+                }
+                tributacao_federal = trib_federal1_collection.find_one(query)
 
-            for empresa in empresas:
-                modelo['_id'] = str(ObjectId())
-                modelo['_p_empresa'] = "Empresa$" + empresa['_id']
+                modelo = {
+                    '_id': str(ObjectId()),
+                    '_p_empresa': "Empresa$" + empresa['_id'],
+                    "precoAtacado": 0,
+                    "precoCustoMedio": 0,
+                    "precoCusto": doc['Precos'][0]['Custo']['Valor'],
+                    "precoCustoReal": 0,
+                    "_p_unidadeMedidaTributavel": "UnidadeMedida$"+unidade_medida['_id'],
+                    "preco": doc['Precos'][0]['Venda']['Valor'],
+                    "ativo": doc['ProdutosServicos'][0]['Ativo'],
+                    "_p_subgrupo": None,
+                    "_p_tributacaoFederal": "TributacaoFederal$"+tributacao_federal['_id'],
+                    "nome": doc['ProdutosServicos'][0]['Descricao'],
+                    "_p_unidadeMedida": "UnidadeMedida$"+unidade_medida['_id'],
+                    "estoque": 0,
+                    "fator": 1,
+                    "classificacao": "produto",
+                    "quantidadeAtacado": 0,
+                    "codigoInterno": doc['ProdutosServicos'][0]['CodigoInterno'],
+                    "ncm": doc['NcmNbs']['Codigo'],
+                    "tipoEstoque": "normal",
+                    "estoqueMaximo": doc['Estoques'][0]['QuantidadeMaxima'],
+                    "_p_tributacaoEstadual": "TributacaoEstadual$DV6r7ksZtb",
+                    "estoqueMinimo": doc['Estoques'][0]['QuantidadeMinima'],
+                    "_created_at": datetime.now(),
+                    "_updated_at": datetime.now(),
+                    "caracteristica": None,
+                    "cest": None,
+                    "descontoMaximo": doc['LimiteDesconto'],
+                    "vendavel": doc['ProdutosServicos'][0]['Vendavel']
+                }
+
+                if len(doc['SubGrupos']) >= 1:
+                    query = {
+                        "ativo": doc['SubGrupos'][0]['Ativo'],
+                        "nome": doc['SubGrupos'][0]['Descricao']
+                    }
+                    sub_grupo = sub_grupo_collection.find_one(query)
+                    modelo["_p_subgrupo"] = "Subgrupo$" + sub_grupo['_id']
+
+                if 'Caracteristica' in doc['ProdutosServicos'][0]:
+                    modelo["caracteristica"] = doc['ProdutosServicos'][0]['Caracteristica']
+
+                if 'CodigoEspecificadorSubstituicaoTributaria' in doc:
+                    modelo["cest"] = doc['CodigoEspecificadorSubstituicaoTributaria']
+
+                if 'Medicamento' in doc['ProdutosServicos'][0]['_t']:
+                    modelo["classificacao"] = "medicamento"
+                    modelo["medicamento"] = {
+                        "registroMS": doc['ProdutosServicos'][0]["RegistroMinisterioSaude"],
+                    }
+
+                    if 'Antimicrobiano' == doc['ProdutosServicos'][0]["ClasseTerapeutica"]['_t']:
+                        modelo["medicamento"]["classeTerapeutica"] = "1"
+
+                    if 'SujeitoAControleEspecial' == doc['ProdutosServicos'][0]["ClasseTerapeutica"]['_t']:
+                        modelo["medicamento"]["classeTerapeutica"] = "2"
+
+                    if 'PrecoMaximoConsumidor' in doc['ProdutosServicos'][0]:
+                        modelo["medicamento"]["PMC"] = doc['ProdutosServicos'][0]['PrecoMaximoConsumidor']
+
+                    if 'Sim' == doc['ProdutosServicos'][0]['UsoProlongado']['_t']:
+                        modelo["medicamento"]["usoProlongado"] = True
+                    elif 'Nao' == doc['ProdutosServicos'][0]['UsoProlongado']['_t']:
+                        modelo["medicamento"]["usoProlongado"] = False
+
+                if 'CodigoBarras' in doc['ProdutosServicos'][0]:
+                    modelo["cean"] = [
+                        {
+                            "cean": doc['ProdutosServicos'][0]['CodigoBarras'],
+                            "fator": 1
+                        }
+                    ]
+
+                if 'EstoqueLote' in doc['Estoques'][0]['_t']:
+                    modelo["tipoEstoque"] = "lote"
+
+                if 'UnidadeMedidaTributavel' in doc['ProdutosServicos'][0]:
+                    query = {
+                        "sigla": doc['ProdutosServicos'][0]['UnidadeMedida']['Sigla']
+                    }
+                    unidade_medida = uni_med1_collection.find_one(query)
+                    modelo['_p_unidadeMedidaTributavel'] = "UnidadeMedida$"+unidade_medida['_id']
+
                 produto_collection.insert_one(modelo)
 
 
