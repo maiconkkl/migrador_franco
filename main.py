@@ -239,10 +239,11 @@ class Migrador:
                     modelo["tipoCadastro"].append('fornecedor')
                 if 'Cliente' in doc:
                     modelo["tipoCadastro"].append('cliente')
-                if 'Juridica' in doc['_t']:
-                    modelo["tipo"] = 'juridica'
-                elif 'Fisica' in doc['_t']:
-                    modelo["tipo"] = 'fisica'
+                if '_t' in doc:
+                    if 'Juridica' in doc['_t']:
+                        modelo["tipo"] = 'juridica'
+                    elif 'Fisica' in doc['_t']:
+                        modelo["tipo"] = 'fisica'
                 modelo["_created_at"] = datetime.now()
                 modelo["_updated_at"] = datetime.now()
 
