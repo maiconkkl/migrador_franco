@@ -230,8 +230,8 @@ class Migrador:
                                 "contato": celular['Numero']
                             }
                             modelo["contato"].append(contato)
-
-                modelo["nome"] = doc['Nome']
+                if 'Nome' in doc:
+                    modelo["nome"] = doc['Nome']
                 if 'NomeFantasia' in doc:
                     modelo["fantasia"] = doc['NomeFantasia']
                 modelo["tipoCadastro"] = []
