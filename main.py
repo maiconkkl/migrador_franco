@@ -234,11 +234,11 @@ class Migrador:
                             modelo["contato"].append(contato)
                 if 'Nome' in doc:
                     modelo["nome"] = doc['Nome']
-                    print('Tributação federal ' + doc['Nome'])
+                    print('Cliente ' + doc['Nome'])
 
                 if 'NomeFantasia' in doc:
                     modelo["fantasia"] = doc['NomeFantasia']
-                    print('Tributação federal ' + doc['NomeFantasia'])
+                    print('Cliente ' + doc['NomeFantasia'])
 
                 modelo["tipoCadastro"] = []
                 if 'Fornecedor' in doc:
@@ -254,6 +254,7 @@ class Migrador:
                 modelo["_updated_at"] = datetime.now()
 
                 pessoa_collection.insert_one(modelo)
+
 
     def migrar_tributacao_federal(self):
         trib_federal_collection = self.database["TributacoesFederal"]
@@ -831,7 +832,7 @@ class Migrador:
                     modelo['_p_unidadeMedidaTributavel'] = "UnidadeMedida$" + unidade_medida['_id']
 
                 produto_collection.insert_one(modelo)
-                print('Produto ' + doc['Descricao'])
+                print('Produto ' + doc['ProdutosServicos'][0]['Descricao'])
 
 
 Migrador()
