@@ -42,8 +42,8 @@ O que vai ser migrado ?
 * **Grupo - Já esta completo**
 * **Subgrupo - Já esta completo**
 * **Laboratorio - Não tem na digisat**
-* Produtos
+* **Produtos - Já esta completo**
 * **Pessoas - Já esta completo**
 * Plano de contas
 * Contas
-* Pagamentos
+* **Pagamentos - Não precisa migrar dito por Rick**
