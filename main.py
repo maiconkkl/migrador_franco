@@ -112,6 +112,7 @@ class Migrador:
                 }
 
                 grupo_collection.insert_one(modelo)
+                print('Grupo ' + doc['Descricao'])
                 for sub_grupo in doc['SubGruposReferencia']:
                     self.migrar_subgrupo(sub_grupo, modelo['_id'])
 
@@ -129,6 +130,7 @@ class Migrador:
             "_updated_at": datetime.now()
         }
         sub_grupo_collection.insert_one(modelo)
+        print('Subgrupo ' + sub_grupo_cursor['Descricao'])
 
     def migrar_pessoas(self):
         pessoas_collection = self.database["Pessoas"]
@@ -232,8 +234,12 @@ class Migrador:
                             modelo["contato"].append(contato)
                 if 'Nome' in doc:
                     modelo["nome"] = doc['Nome']
+                    print('Tributação federal ' + doc['Nome'])
+
                 if 'NomeFantasia' in doc:
                     modelo["fantasia"] = doc['NomeFantasia']
+                    print('Tributação federal ' + doc['NomeFantasia'])
+
                 modelo["tipoCadastro"] = []
                 if 'Fornecedor' in doc:
                     modelo["tipoCadastro"].append('fornecedor')
@@ -477,6 +483,7 @@ class Migrador:
                 modelo["_updated_at"] = datetime.now()
 
                 trib_federal1_collection.insert_one(modelo)
+                print('Tributação federal ' + doc['Descricao'])
 
     def migrar_tributacao_estadual(self):
         empresas = self.localizar_empresa_destino()
@@ -621,6 +628,7 @@ class Migrador:
                     modelo['percentual']['industria'] = publico
 
                 trib_estadual1_colletion.insert_one(modelo)
+                print('Tributação estadual ' + doc['Descricao'])
 
     def migrar_unidades_medida(self):
         empresas = self.localizar_empresa_destino()
@@ -641,9 +649,11 @@ class Migrador:
                 }
 
                 uni_med1_collection.insert_one(modelo)
+                print('Unidade de medida ' + doc['Descricao'])
 
     def migrar_produtos(self):
         empresas = self.localizar_empresa_destino()
+        estoque_lote_collection = self.database["EstoqueLote"]
         produtos_collection = self.database["ProdutosServicosEmpresa"]
         produto_collection = self.database1["Produto"]
         sub_grupo_collection = self.database1["Subgrupo"]
@@ -710,8 +720,7 @@ class Migrador:
                     "sigla": doc['ProdutosServicos'][0]['UnidadeMedida']['Sigla']
                 }
                 unidade_medida = uni_med1_collection.find_one(query)
-                print('\n\n\n\n')
-                print(doc)
+
                 query = {
                     "ativo": doc['TributacoesFederal'][0]['Ativo'],
                     "nome": doc['TributacoesFederal'][0]['Descricao']
@@ -725,13 +734,13 @@ class Migrador:
                     "precoCustoMedio": 0,
                     "precoCusto": doc['Precos'][0]['Custo']['Valor'],
                     "precoCustoReal": 0,
-                    "_p_unidadeMedidaTributavel": "UnidadeMedida$"+unidade_medida['_id'],
+                    "_p_unidadeMedidaTributavel": "UnidadeMedida$" + unidade_medida['_id'],
                     "preco": doc['Precos'][0]['Venda']['Valor'],
                     "ativo": doc['ProdutosServicos'][0]['Ativo'],
                     "_p_subgrupo": None,
-                    "_p_tributacaoFederal": "TributacaoFederal$"+tributacao_federal['_id'],
+                    "_p_tributacaoFederal": "TributacaoFederal$" + tributacao_federal['_id'],
                     "nome": doc['ProdutosServicos'][0]['Descricao'],
-                    "_p_unidadeMedida": "UnidadeMedida$"+unidade_medida['_id'],
+                    "_p_unidadeMedida": "UnidadeMedida$" + unidade_medida['_id'],
                     "estoque": 0,
                     "fator": 1,
                     "classificacao": "produto",
@@ -794,15 +803,35 @@ class Migrador:
 
                 if 'EstoqueLote' in doc['Estoques'][0]['_t']:
                     modelo["tipoEstoque"] = "lote"
+                    for lote in doc['Estoques'][0]['Itens']:
+                        quantidade = 0
+                        for estoque in doc['Estoques'][0]['Quantidades']:
+                            if estoque['EstoqueReferencia'] == lote['_id']:
+                                quantidade = estoque['Quantidade']
+                        template_lote = {
+                            '_id': str(ObjectId()),
+                            'lote': lote['Numero'],
+                            'quantidade': quantidade,
+                            'dataVencimento': lote['DataValidade'],
+                            'dataFabricacao': lote['DataFabricacao'],
+                            '_p_produto': 'Produto$' + modelo['_id'],
+                            '_created_at': datetime.now(),
+                            '_updated_at': datetime.now(),
+                        }
+                        estoque_lote_collection.insert_one(template_lote)
+                else:
+                    for estoque in doc['Estoques'][0]['Quantidades']:
+                        modelo['estoque'] = estoque['Quantidade']
 
                 if 'UnidadeMedidaTributavel' in doc['ProdutosServicos'][0]:
                     query = {
                         "sigla": doc['ProdutosServicos'][0]['UnidadeMedida']['Sigla']
                     }
                     unidade_medida = uni_med1_collection.find_one(query)
-                    modelo['_p_unidadeMedidaTributavel'] = "UnidadeMedida$"+unidade_medida['_id']
+                    modelo['_p_unidadeMedidaTributavel'] = "UnidadeMedida$" + unidade_medida['_id']
 
                 produto_collection.insert_one(modelo)
+                print('Produto ' + doc['Descricao'])
 
 
 Migrador()
