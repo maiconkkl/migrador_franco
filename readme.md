@@ -44,6 +44,6 @@ O que vai ser migrado ?
 * **Laboratorio - Não tem na digisat**
 * **Produtos - Já esta completo**
 * **Pessoas - Já esta completo**
-* Plano de contas
+* **Plano de contas - Já esta completo**
 * **Contas - Já esta completo**
 * **Pagamentos - Não precisa migrar dito por Rick**

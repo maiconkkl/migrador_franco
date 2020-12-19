@@ -74,6 +74,7 @@ class Migrador:
         self.migrar_tributacao_estadual()
         self.migrar_unidades_medida()
         self.migrar_contas()
+        self.migrar_plano_contas()
         self.migrar_produtos()
 
     def fecha_conexao(self):
@@ -678,6 +679,42 @@ class Migrador:
                     modelo["contaVerificador"] = doc['DigitoConta']
                 conta_collection.insert_one(modelo)
                 print('Conta ' + doc['Descricao'])
+
+    def migrar_plano_contas(self, ):
+        planos_conta_colletion = self.database["PlanosConta"]
+        cursor = planos_conta_colletion.find({})
+        for doc in cursor:
+            self.inserir_plano_contas(doc, True)
+
+    def inserir_plano_contas(self, doc, principal=True):
+        plano_conta_colletion = self.database1["PlanoConta"]
+        empresas = self.localizar_empresa_destino()
+        for empresa in empresas:
+            modelo = {
+                "_id": str(ObjectId()),
+                "nome": doc['Descricao'],
+                "principal": principal,
+                "codigo": doc['CodigoUnico'],
+                "ordem": str(doc['CodigoUnico']),
+                "_p_empresa": "Empresa$" + empresa['_id'],
+                "tipo": "neutra",
+                "ativo": doc['Ativo'],
+                "_created_at": datetime.now(),
+                "_updated_at": datetime.now()
+            }
+            if doc['Tipo'] == 0:
+                modelo["tipo"] = 'neutra'
+            elif doc['Tipo'] == 1:
+                modelo["tipo"] = 'receita'
+            elif doc['Tipo'] == 2:
+                modelo["tipo"] = 'despesa'
+            if 'CodigoContabil' in doc:
+                modelo["codigoContabil"] = doc['CodigoContabil']
+
+            for doc1 in doc['Branches']:
+                self.inserir_plano_contas(doc1, False)
+            plano_conta_colletion.insert_one(modelo)
+            print('Plano de conta ' + doc['Descricao'])
 
     def migrar_produtos(self):
         empresas = self.localizar_empresa_destino()
