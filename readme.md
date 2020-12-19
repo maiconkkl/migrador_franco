@@ -45,5 +45,5 @@ O que vai ser migrado ?
 * **Produtos - Já esta completo**
 * **Pessoas - Já esta completo**
 * Plano de contas
-* Contas
+* **Contas - Já esta completo**
 * **Pagamentos - Não precisa migrar dito por Rick**

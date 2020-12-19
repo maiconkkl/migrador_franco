@@ -73,6 +73,7 @@ class Migrador:
         self.migrar_pessoas()
         self.migrar_tributacao_estadual()
         self.migrar_unidades_medida()
+        self.migrar_contas()
         self.migrar_produtos()
 
     def fecha_conexao(self):
@@ -254,7 +255,6 @@ class Migrador:
                 modelo["_updated_at"] = datetime.now()
 
                 pessoa_collection.insert_one(modelo)
-
 
     def migrar_tributacao_federal(self):
         trib_federal_collection = self.database["TributacoesFederal"]
@@ -651,6 +651,33 @@ class Migrador:
 
                 uni_med1_collection.insert_one(modelo)
                 print('Unidade de medida ' + doc['Descricao'])
+
+    def migrar_contas(self):
+        empresas = self.localizar_empresa_destino()
+        contas_collection = self.database["Contas"]
+        conta_collection = self.database1["Conta"]
+
+        cursor = contas_collection.find({})
+        for empresa in empresas:
+            for doc in cursor:
+                modelo = {
+                    "_id": str(ObjectId()),
+                    "ativo": doc['Ativo'],
+                    "tipo": "livrocaixa",
+                    "nome": doc['Descricao'],
+                    "_p_empresa": "Empresa$" + empresa['_id'],
+                    "_created_at": datetime.now(),
+                    "_updated_at": datetime.now()
+                }
+                if 'Agencia' in doc['_t']:
+                    modelo["tipo"] = "bancaria"
+                    modelo["banco"] = str(doc['CodigoBanco'])
+                    modelo["agencia"] = doc['NumeroAgencia']
+                    modelo["agenciaVerificador"] = doc['DigitoAgencia']
+                    modelo["conta"] = doc['NumeroConta']
+                    modelo["contaVerificador"] = doc['DigitoConta']
+                conta_collection.insert_one(modelo)
+                print('Conta ' + doc['Descricao'])
 
     def migrar_produtos(self):
         empresas = self.localizar_empresa_destino()
