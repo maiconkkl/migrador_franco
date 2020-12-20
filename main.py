@@ -490,7 +490,7 @@ class Migrador:
     def migrar_tributacao_estadual(self):
         empresas = self.localizar_empresa_destino()
         trib_estadual_colletion = self.database["TributacoesEstadual"]
-        trib_estadual1_colletion = self.database["TributacaoEstadual"]
+        trib_estadual1_colletion = self.database1["TributacaoEstadual"]
         op_fiscal_colletion = self.database["OperacoesFiscais"]
         cursor = trib_estadual_colletion.find({})
         for empresa in empresas:
