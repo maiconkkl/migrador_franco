@@ -28,6 +28,9 @@ class Migrador:
     port1 = 12220
     database1 = None
 
+    empresa_cnpj = None
+    empresa_ie = None
+
     def __init__(self):
         f = open(r'C:\DigiSat\SuiteG6\Sistema\ConfiguracaoClient.xml', 'r')
         data = f.read()
@@ -84,6 +87,13 @@ class Migrador:
     def localizar_empresa_destino(self, cnpj=None, ie=None):
         collection_pessoa = self.database1["Pessoa"]
         query = {"tipoCadastro": Regex(u".*emitente.*", "i"), "ativo": True}
+        
+        if self.empresa_cnpj is not None:
+            query["documento.cnpj.documento"] = self.empresa_cnpj
+
+        if self.empresa_ie is not None:
+            query["documento.ie.documento"] = self.empresa_ie
+
         if cnpj is not None:
             query["documento.cnpj.documento"] = cnpj
 
@@ -142,7 +152,7 @@ class Migrador:
         cursor = pessoas_collection.find({})
         for empresa in empresas:
             for doc in cursor:
-                modelo = {"_id": str(ObjectId()), "_p_empresa": "Empresa$" + empresa['_id']}
+                modelo = {"_id": str(ObjectId()), "_p_empresa": "Empresa$" + empresa['_id'], 'ativo': True}
                 if 'Classificacao' in doc:
                     modelo["classificacao"] = doc['Classificacao']['_t'].lower()
                 if 'Cnpj' in doc:
