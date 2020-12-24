@@ -184,7 +184,7 @@ class Migrador:
                     if 'Ie' in doc['Carteira']:
                         if 'documento' not in modelo:
                             modelo["documento"] = {}
-                        modelo["documento"]["cnpj"] = {
+                        modelo["documento"]["ie"] = {
                             "tipo": "ie",
                             "indicadorIE": "1",
                             "documento": doc['Carteira']['Ie']['Numero']
