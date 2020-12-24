@@ -1,3 +1,4 @@
+import re
 import socket
 from lxml import objectify
 from pymongo import MongoClient
@@ -205,35 +206,35 @@ class Migrador:
                     if 'TelefonePrincipal' in doc['Carteira']:
                         contato = {
                             "tipo": "telefone",
-                            "contato": doc['Carteira']['TelefonePrincipal']['Numero']
+                            "contato": re.sub('[^0-9]', '', doc['Carteira']['TelefonePrincipal']['Numero'])
                         }
                         modelo["contato"].append(contato)
 
                     if 'TelefoneComercial' in doc['Carteira']:
                         contato = {
                             "tipo": "telefone",
-                            "contato": doc['Carteira']['TelefoneComercial']['Numero']
+                            "contato": re.sub('[^0-9]', '', doc['Carteira']['TelefoneComercial']['Numero'])
                         }
                         modelo["contato"].append(contato)
 
                     if 'TelefoneFax' in doc['Carteira']:
                         contato = {
                             "tipo": "telefone",
-                            "contato": doc['Carteira']['TelefoneFax']['Numero']
+                            "contato": re.sub('[^0-9]', '', doc['Carteira']['TelefoneFax']['Numero'])
                         }
                         modelo["contato"].append(contato)
 
                     if 'TelefoneResidencial' in doc['Carteira']:
                         contato = {
                             "tipo": "telefone",
-                            "contato": doc['Carteira']['TelefoneResidencial']['Numero']
+                            "contato": re.sub('[^0-9]', '', doc['Carteira']['TelefoneResidencial']['Numero'])
                         }
                         modelo["contato"].append(contato)
 
                     if 'TelefoneWhatsApp' in doc['Carteira']:
                         contato = {
                             "tipo": "telefone",
-                            "contato": doc['Carteira']['TelefoneWhatsApp']['Numero']
+                            "contato": re.sub('[^0-9]', '', doc['Carteira']['TelefoneWhatsApp']['Numero'])
                         }
                         modelo["contato"].append(contato)
 
@@ -241,7 +242,7 @@ class Migrador:
                         for celular in doc['Carteira']['Celulares']:
                             contato = {
                                 "tipo": "telefone",
-                                "contato": celular['Numero']
+                                "contato": re.sub('[^0-9]', '', celular['Numero'])
                             }
                             modelo["contato"].append(contato)
                 if 'Nome' in doc:
